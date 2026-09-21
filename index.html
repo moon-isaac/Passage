@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Passage</title>
+<style>
+html, body {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #000;
+}
+body {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+#viewer {
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+#viewer img {
+  display: block;
+  max-width: 100vw;
+  max-height: 100vh;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  pointer-events: none;
+}
+</style>
+</head>
+<body>
+<div id="viewer"><img id="image" alt=""></div>
+
+<script>
+/*
+  Passage image viewer
+
+  Repository structure:
+    Passage/
+      index.html
+      images/
+        A1.jpg ... H7.jpg
+
+  Horizontal swipe:
+    random image within the current layer.
+
+  Vertical swipe:
+    A -> B -> C -> D -> E -> F -> G -> H
+    Swipe down reverses the direction.
+
+  The number after the letter is only an identifier.
+*/
+
+const layers = {
+  "A": ['images/A1.jpg', 'images/A2.jpg', 'images/A3.jpg', 'images/A4.png', 'images/A5.png', 'images/A6.png', 'images/A7.jpg', 'images/A8.jpg'],
+  "B": ['images/B1.jpg', 'images/B2.jpg', 'images/B3.jpg', 'images/B4.png', 'images/B5.png'],
+  "C": ['images/C1.jpg', 'images/C2.png', 'images/C3.png', 'images/C4.jpg', 'images/C5.png', 'images/C6.png'],
+  "D": ['images/D1.jpg', 'images/D2.jpg', 'images/D3.jpg', 'images/D4.jpg', 'images/D5.jpg', 'images/D6.png', 'images/D7.png', 'images/D8.png', 'images/D9.png', 'images/D10.png'],
+  "E": ['images/E1.jpg', 'images/E2.jpg', 'images/E3.jpg', 'images/E4.jpg', 'images/E5.jpg'],
+  "F": ['images/F1.jpg', 'images/F2.jpg', 'images/F3.jpg', 'images/F4.jpg', 'images/F5.jpg', 'images/F6.jpg'],
+  "G": ['images/G1.png', 'images/G2.png', 'images/G3.jpg', 'images/G4.jpg', 'images/G5.jpg', 'images/G6.jpg'],
+  "H": ['images/H1.jpg', 'images/H2.jpg', 'images/H3.jpg', 'images/H4.jpg', 'images/H5.jpg', 'images/H6.jpg', 'images/H7.jpg']
+};
+const layerNames = Object.keys(layers);
+
+let currentLayerIndex = 0;
+let currentPath = null;
+
+const image = document.getElementById("image");
+
+function randomItem(array) {
+  if (array.length === 1) return array[0];
+
+  let item;
+  do {
+    item = array[Math.floor(Math.random() * array.length)];
+  } while (item === currentPath);
+
+  return item;
+}
+
+function show(path) {
+  currentPath = path;
+  image.src = path;
+}
+
+function randomCurrentLayer() {
+  show(randomItem(layers[layerNames[currentLayerIndex]]));
+}
+
+function moveLayer(direction) {
+  currentLayerIndex =
+    (currentLayerIndex + direction + layerNames.length) %
+    layerNames.length;
+
+  show(randomItem(layers[layerNames[currentLayerIndex]]));
+}
+
+// Initial image: random image from A.
+show(randomItem(layers.A));
+
+// Touch / mouse swipe
+let startX = 0;
+let startY = 0;
+let dragging = false;
+
+const SWIPE_THRESHOLD = 45;
+const DIRECTION_RATIO = 1.15;
+
+function startPointer(x, y) {
+  startX = x;
+  startY = y;
+  dragging = true;
+}
+
+function endPointer(x, y) {
+  if (!dragging) return;
+  dragging = false;
+
+  const dx = x - startX;
+  const dy = y - startY;
+  const absX = Math.abs(dx);
+  const absY = Math.abs(dy);
+
+  if (Math.max(absX, absY) < SWIPE_THRESHOLD) return;
+
+  if (absX > absY * DIRECTION_RATIO) {
+    // Left/right: random image within same layer.
+    randomCurrentLayer();
+  } else if (absY > absX * DIRECTION_RATIO) {
+    // Up: next layer / Down: previous layer.
+    moveLayer(dy < 0 ? 1 : -1);
+  }
+}
+
+document.addEventListener("touchstart", e => {
+  if (e.touches.length !== 1) return;
+  startPointer(e.touches[0].clientX, e.touches[0].clientY);
+}, { passive: true });
+
+document.addEventListener("touchend", e => {
+  if (e.changedTouches.length !== 1) return;
+  endPointer(e.changedTouches[0].clientX, e.changedTouches[0].clientY);
+}, { passive: true });
+
+document.addEventListener("mousedown", e => {
+  startPointer(e.clientX, e.clientY);
+});
+
+document.addEventListener("mouseup", e => {
+  endPointer(e.clientX, e.clientY);
+});
+
+// Desktop keyboard testing.
+document.addEventListener("keydown", e => {
+  if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
+    randomCurrentLayer();
+  } else if (e.key === "ArrowUp") {
+    moveLayer(1);
+  } else if (e.key === "ArrowDown") {
+    moveLayer(-1);
+  }
+});
+</script>
+</body>
+</html>
